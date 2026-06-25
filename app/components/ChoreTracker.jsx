@@ -1,10 +1,8 @@
 "use client"
-
 import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 // ─── Palette & Theme ────────────────────────────────────────────────────────
-// Playful but not childish: deep navy base, warm yellow gold accent,
-// coral for alerts, mint for success. Rounded cards, emoji-forward UI.
 const COLORS = {
   navy: "#1a2340",
   navyLight: "#2a3560",
@@ -13,8 +11,6 @@ const COLORS = {
   coral: "#ff6b6b",
   mint: "#4ecdc4",
   mintLight: "#e8faf9",
-  lavender: "#a78bfa",
-  lavenderLight: "#f3f0ff",
   bg: "#f7f8fc",
   card: "#ffffff",
   text: "#1a2340",
@@ -22,27 +18,8 @@ const COLORS = {
   border: "#e8eaf0",
 };
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-const INITIAL_USERS = [
-  { id: "parent1", name: "Anusha", role: "parent", pin: "6622", avatar: "👩" },
-  { id: "parent2", name: "Venkat", role: "parent", pin: "2433", avatar: "👨" },
-  { id: "child1", name: "Sarvesh", role: "child", pin: "2299", avatar: "🦁", points: 0 },
-  { id: "child2", name: "Sanjay", role: "child", pin: "5599", avatar: "🐯", points: 0 },
-];
-
-const INITIAL_CHORES = [
-  { id: "c1", title: "Make bed", emoji: "🛏️", points: 5, assignedTo: "child1", frequency: "daily" },
-  { id: "c2", title: "Clear dishes", emoji: "🍽️", points: 5, assignedTo: "child1", frequency: "daily" },
-  { id: "c3", title: "Tidy room", emoji: "🧹", points: 10, assignedTo: "child1", frequency: "weekly" },
-  { id: "c4", title: "Feed the dog", emoji: "🐕", points: 5, assignedTo: "child2", frequency: "daily" },
-  { id: "c5", title: "Take out trash", emoji: "🗑️", points: 10, assignedTo: "child2", frequency: "weekly" },
-  { id: "c6", title: "Vacuum living room", emoji: "🌀", points: 15, assignedTo: "child2", frequency: "weekly" },
-];
-
-// Get today's date string
 const today = () => new Date().toISOString().split("T")[0];
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const S = {
   app: {
     minHeight: "100vh",
@@ -119,42 +96,24 @@ const S = {
     fontWeight: 700,
     display: "inline-block",
   }),
-  bottomNav: {
-    position: "fixed",
-    bottom: 0,
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: "100%",
-    maxWidth: 480,
-    background: "#fff",
-    borderTop: `1px solid ${COLORS.border}`,
-    display: "flex",
-    padding: "8px 0 12px",
-    zIndex: 20,
-  },
-  navBtn: (active) => ({
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 3,
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: active ? COLORS.navy : COLORS.muted,
-    fontSize: 10,
-    fontWeight: active ? 800 : 500,
-  }),
 };
 
-// ─── Components ──────────────────────────────────────────────────────────────
-
+// ─── Login Screen ─────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
+  const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const users = INITIAL_USERS;
+  useEffect(() => {
+    async function fetchUsers() {
+      const { data } = await supabase.from("profiles").select("*").order("role");
+      setUsers(data || []);
+      setLoading(false);
+    }
+    fetchUsers();
+  }, []);
 
   function handlePinKey(digit) {
     if (pin.length < 4) {
@@ -171,33 +130,40 @@ function LoginScreen({ onLogin }) {
     }
   }
 
-  if (!selectedUser) {
-    return (
-      <div style={{ ...S.app, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 0 }}>
-        <div style={{ background: COLORS.navy, width: "100%", maxWidth: 480, padding: "40px 24px 32px", textAlign: "center", borderRadius: "0 0 32px 32px" }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>⭐</div>
-          <div style={{ color: "#fff", fontSize: 26, fontWeight: 900, letterSpacing: "-0.5px" }}>Chore Stars</div>
-          <div style={{ color: COLORS.muted, fontSize: 14, marginTop: 4 }}>Who's checking in today?</div>
-        </div>
-        <div style={{ padding: "28px 20px", width: "100%", maxWidth: 480, boxSizing: "border-box" }}>
-          {users.map(u => (
-            <button key={u.id} onClick={() => setSelectedUser(u)} style={{
-              width: "100%", background: COLORS.card, border: `2px solid ${COLORS.border}`,
-              borderRadius: 16, padding: "16px 20px", marginBottom: 10,
-              display: "flex", alignItems: "center", gap: 16, cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(26,35,64,0.06)",
-            }}>
-              <span style={{ fontSize: 36 }}>{u.avatar}</span>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ fontWeight: 800, fontSize: 17, color: COLORS.navy }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>{u.role}</div>
-              </div>
-            </button>
-          ))}
-        </div>
+  if (loading) return (
+    <div style={{ ...S.app, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div style={{ textAlign: "center", color: COLORS.muted }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>⭐</div>
+        <div>Loading...</div>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (!selectedUser) return (
+    <div style={{ ...S.app, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div style={{ background: COLORS.navy, width: "100%", maxWidth: 480, padding: "40px 24px 32px", textAlign: "center", borderRadius: "0 0 32px 32px" }}>
+        <div style={{ fontSize: 48, marginBottom: 8 }}>⭐</div>
+        <div style={{ color: "#fff", fontSize: 26, fontWeight: 900 }}>Chore Stars</div>
+        <div style={{ color: COLORS.muted, fontSize: 14, marginTop: 4 }}>Who's checking in today?</div>
+      </div>
+      <div style={{ padding: "28px 20px", width: "100%", maxWidth: 480, boxSizing: "border-box" }}>
+        {users.map(u => (
+          <button key={u.id} onClick={() => setSelectedUser(u)} style={{
+            width: "100%", background: COLORS.card, border: `2px solid ${COLORS.border}`,
+            borderRadius: 16, padding: "16px 20px", marginBottom: 10,
+            display: "flex", alignItems: "center", gap: 16, cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(26,35,64,0.06)",
+          }}>
+            <span style={{ fontSize: 36 }}>{u.avatar}</span>
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontWeight: 800, fontSize: 17, color: COLORS.navy }}>{u.name}</div>
+              <div style={{ fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>{u.role}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ ...S.app, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
@@ -209,9 +175,8 @@ function LoginScreen({ onLogin }) {
         <div style={{ fontSize: 56, marginBottom: 8 }}>{selectedUser.avatar}</div>
         <div style={{ fontWeight: 900, fontSize: 22, color: COLORS.navy }}>{selectedUser.name}</div>
         <div style={{ color: COLORS.muted, fontSize: 14, marginBottom: 28 }}>Enter your PIN</div>
-
         <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 28 }}>
-          {[0, 1, 2, 3].map(i => (
+          {[0,1,2,3].map(i => (
             <div key={i} style={{
               width: 18, height: 18, borderRadius: "50%",
               background: i < pin.length ? COLORS.navy : COLORS.border,
@@ -219,9 +184,7 @@ function LoginScreen({ onLogin }) {
             }} />
           ))}
         </div>
-
         {error && <div style={{ color: COLORS.coral, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
-
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, maxWidth: 280, margin: "0 auto" }}>
           {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((d, i) => (
             <button key={i} onClick={() => {
@@ -236,71 +199,93 @@ function LoginScreen({ onLogin }) {
             }}>{d}</button>
           ))}
         </div>
-        <div style={{ marginTop: 16, fontSize: 11, color: COLORS.muted }}></div>
       </div>
     </div>
   );
 }
 
-function CheckIcon() {
-  return <span style={{ fontSize: 18 }}>✓</span>;
-}
-
+// ─── Parent App ───────────────────────────────────────────────────────────────
 function ParentApp({ user, onLogout }) {
   const [tab, setTab] = useState("overview");
-  const [users, setUsers] = useState(INITIAL_USERS);
-  const [chores, setChores] = useState(INITIAL_CHORES);
-  const [logs, setLogs] = useState({});
+  const [children, setChildren] = useState([]);
+  const [chores, setChores] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [showAddChore, setShowAddChore] = useState(false);
-  const [newChore, setNewChore] = useState({ title: "", emoji: "⭐", points: 5, assignedTo: "child1", frequency: "daily" });
+  const [newChore, setNewChore] = useState({ title: "", emoji: "⭐", points: 5, assigned_to: "", frequency: "daily" });
+  const [loading, setLoading] = useState(true);
 
-  const children = users.filter(u => u.role === "child");
+  const EMOJIS = ["⭐","🧹","🛏️","🍽️","🌀","🐕","🗑️","📚","🌱","🧺","🚿","🪟"];
 
-  function getChildLogs(childId) {
-    return logs[childId] || {};
+  useEffect(() => { fetchAll(); }, []);
+
+  async function fetchAll() {
+    setLoading(true);
+    const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "child");
+    const { data: choreData } = await supabase.from("chores").select("*");
+    const { data: logData } = await supabase.from("chore_logs").select("*");
+    setChildren(profiles || []);
+    setChores(choreData || []);
+    setLogs(logData || []);
+    if (profiles && profiles.length > 0 && !newChore.assigned_to) {
+      setNewChore(p => ({ ...p, assigned_to: profiles[0].id }));
+    }
+    setLoading(false);
   }
 
   function getTodayCompletions(childId) {
-    const childLogs = getChildLogs(childId);
-    return Object.entries(childLogs).filter(([k, v]) => v === today()).length;
+    const childChores = chores.filter(c => c.assigned_to === childId);
+    return childChores.filter(c => logs.some(l => l.chore_id === c.id && l.completed_date === today())).length;
   }
 
   function getTotalPoints(childId) {
-    const childLogs = getChildLogs(childId);
-    let pts = 0;
-    Object.entries(childLogs).forEach(([choreId]) => {
-      const chore = chores.find(c => c.id === choreId);
-      if (chore) pts += chore.points;
-    });
-    return pts;
+    const childChores = chores.filter(c => c.assigned_to === childId);
+    return logs
+      .filter(l => childChores.some(c => c.id === l.chore_id))
+      .reduce((sum, l) => {
+        const chore = chores.find(c => c.id === l.chore_id);
+        return sum + (chore ? chore.points : 0);
+      }, 0);
   }
 
   function getWeeklyData(childId) {
+    const childChores = chores.filter(c => c.assigned_to === childId);
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
       const ds = d.toISOString().split("T")[0];
       const dayName = d.toLocaleDateString("en", { weekday: "short" });
-      const childLogs = getChildLogs(childId);
-      const count = Object.values(childLogs).filter(v => v === ds).length;
+      const count = logs.filter(l => l.completed_date === ds && childChores.some(c => c.id === l.chore_id)).length;
       days.push({ day: dayName, count });
     }
     return days;
   }
 
-  function addChore() {
+  async function addChore() {
     if (!newChore.title.trim()) return;
-    const id = "c" + Date.now();
-    setChores(prev => [...prev, { ...newChore, id, points: Number(newChore.points) }]);
-    setNewChore({ title: "", emoji: "⭐", points: 5, assignedTo: "child1", frequency: "daily" });
+    const { data } = await supabase.from("chores").insert([{
+      title: newChore.title,
+      emoji: newChore.emoji,
+      points: Number(newChore.points),
+      assigned_to: newChore.assigned_to,
+      frequency: newChore.frequency,
+    }]).select();
+    if (data) setChores(prev => [...prev, ...data]);
+    setNewChore(p => ({ ...p, title: "", emoji: "⭐", points: 5 }));
     setShowAddChore(false);
   }
 
-  function deleteChore(id) {
+  async function deleteChore(id) {
+    await supabase.from("chores").delete().eq("id", id);
     setChores(prev => prev.filter(c => c.id !== id));
   }
 
-  const EMOJIS = ["⭐","🧹","🛏️","🍽️","🌀","🐕","🗑️","📚","🌱","🧺","🚿","🪟"];
+  if (loading) return (
+    <div style={{ ...S.app, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div style={{ textAlign: "center", color: COLORS.muted }}>
+        <div style={{ fontSize: 48 }}>⭐</div><div>Loading...</div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={S.app}>
@@ -313,7 +298,6 @@ function ParentApp({ user, onLogout }) {
       </div>
 
       <div style={S.body}>
-        {/* Tab Bar */}
         <div style={{ ...S.card, padding: 6, display: "flex", gap: 4, marginBottom: 16 }}>
           {["overview","chores","analytics"].map(t => (
             <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
@@ -322,42 +306,35 @@ function ParentApp({ user, onLogout }) {
           ))}
         </div>
 
-        {/* OVERVIEW TAB */}
-        {tab === "overview" && (
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>Today's Progress</div>
-            {children.map(child => {
-              const childChores = chores.filter(c => c.assignedTo === child.id);
-              const done = getTodayCompletions(child.id);
-              const pct = childChores.length ? Math.round((done / childChores.length) * 100) : 0;
-              const pts = getTotalPoints(child.id);
-              return (
-                <div key={child.id} style={S.card}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 32 }}>{child.avatar}</span>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: 17 }}>{child.name}</div>
-                        <div style={{ fontSize: 12, color: COLORS.muted }}>{done}/{childChores.length} chores done</div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 900, fontSize: 22, color: COLORS.navy }}>{pts}</div>
-                      <div style={{ fontSize: 11, color: COLORS.muted }}>total pts</div>
-                    </div>
+        {/* OVERVIEW */}
+        {tab === "overview" && children.map(child => {
+          const childChores = chores.filter(c => c.assigned_to === child.id);
+          const done = getTodayCompletions(child.id);
+          const pct = childChores.length ? Math.round((done / childChores.length) * 100) : 0;
+          return (
+            <div key={child.id} style={S.card}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 32 }}>{child.avatar}</span>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 17 }}>{child.name}</div>
+                    <div style={{ fontSize: 12, color: COLORS.muted }}>{done}/{childChores.length} chores done</div>
                   </div>
-                  {/* Progress bar */}
-                  <div style={{ background: COLORS.border, borderRadius: 8, height: 8, overflow: "hidden" }}>
-                    <div style={{ background: pct === 100 ? COLORS.mint : COLORS.gold, width: `${pct}%`, height: "100%", borderRadius: 8, transition: "width 0.4s" }} />
-                  </div>
-                  <div style={{ textAlign: "right", fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{pct}% complete</div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontWeight: 900, fontSize: 22 }}>{getTotalPoints(child.id)}</div>
+                  <div style={{ fontSize: 11, color: COLORS.muted }}>total pts</div>
+                </div>
+              </div>
+              <div style={{ background: COLORS.border, borderRadius: 8, height: 8, overflow: "hidden" }}>
+                <div style={{ background: pct === 100 ? COLORS.mint : COLORS.gold, width: `${pct}%`, height: "100%", borderRadius: 8 }} />
+              </div>
+              <div style={{ textAlign: "right", fontSize: 11, color: COLORS.muted, marginTop: 4 }}>{pct}% complete</div>
+            </div>
+          );
+        })}
 
-        {/* CHORES TAB */}
+        {/* CHORES */}
         {tab === "chores" && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -390,8 +367,8 @@ function ParentApp({ user, onLogout }) {
                   </div>
                   <div>
                     <label style={S.label}>Assign to</label>
-                    <select style={S.input} value={newChore.assignedTo}
-                      onChange={e => setNewChore(p => ({ ...p, assignedTo: e.target.value }))}>
+                    <select style={S.input} value={newChore.assigned_to}
+                      onChange={e => setNewChore(p => ({ ...p, assigned_to: e.target.value }))}>
                       {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
@@ -417,7 +394,7 @@ function ParentApp({ user, onLogout }) {
                   <span style={{ fontSize: 22 }}>{child.avatar}</span>
                   <span style={{ fontWeight: 800, fontSize: 16 }}>{child.name}'s Chores</span>
                 </div>
-                {chores.filter(c => c.assignedTo === child.id).map(chore => (
+                {chores.filter(c => c.assigned_to === child.id).map(chore => (
                   <div key={chore.id} style={{ ...S.card, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 24 }}>{chore.emoji}</span>
@@ -433,7 +410,7 @@ function ParentApp({ user, onLogout }) {
                     </div>
                   </div>
                 ))}
-                {chores.filter(c => c.assignedTo === child.id).length === 0 && (
+                {chores.filter(c => c.assigned_to === child.id).length === 0 && (
                   <div style={{ ...S.card, textAlign: "center", color: COLORS.muted, fontSize: 13, padding: 20 }}>
                     No chores yet — add one above!
                   </div>
@@ -443,100 +420,113 @@ function ParentApp({ user, onLogout }) {
           </div>
         )}
 
-        {/* ANALYTICS TAB */}
-        {tab === "analytics" && (
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.muted, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.5px" }}>This Week</div>
-            {children.map(child => {
-              const weekly = getWeeklyData(child.id);
-              const maxCount = Math.max(...weekly.map(d => d.count), 1);
-              const totalPts = getTotalPoints(child.id);
-              const totalDone = Object.keys(getChildLogs(child.id)).length;
-              return (
-                <div key={child.id} style={{ ...S.card, marginBottom: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                    <span style={{ fontSize: 28 }}>{child.avatar}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: 17 }}>{child.name}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 900, fontSize: 24, color: COLORS.gold }}>{totalPts}</div>
-                      <div style={{ fontSize: 11, color: COLORS.muted }}>total pts</div>
-                    </div>
-                  </div>
-                  {/* Bar chart */}
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80, marginBottom: 6 }}>
-                    {weekly.map((d, i) => (
-                      <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                        <div style={{ width: "100%", background: d.count > 0 ? COLORS.gold : COLORS.border,
-                          height: Math.max((d.count / maxCount) * 64, d.count > 0 ? 8 : 4),
-                          borderRadius: "4px 4px 0 0", transition: "height 0.3s" }} />
-                        <div style={{ fontSize: 10, color: COLORS.muted }}>{d.day}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    <div style={{ flex: 1, background: COLORS.goldLight, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontWeight: 900, fontSize: 20, color: COLORS.navy }}>{totalDone}</div>
-                      <div style={{ fontSize: 11, color: COLORS.muted }}>chores done</div>
-                    </div>
-                    <div style={{ flex: 1, background: COLORS.mintLight, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontWeight: 900, fontSize: 20, color: COLORS.navy }}>{totalPts}</div>
-                      <div style={{ fontSize: 11, color: COLORS.muted }}>points earned</div>
-                    </div>
-                  </div>
+        {/* ANALYTICS */}
+        {tab === "analytics" && children.map(child => {
+          const weekly = getWeeklyData(child.id);
+          const maxCount = Math.max(...weekly.map(d => d.count), 1);
+          const totalPts = getTotalPoints(child.id);
+          const totalDone = logs.filter(l => chores.filter(c => c.assigned_to === child.id).some(c => c.id === l.chore_id)).length;
+          return (
+            <div key={child.id} style={{ ...S.card, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <span style={{ fontSize: 28 }}>{child.avatar}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: 17 }}>{child.name}</div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontWeight: 900, fontSize: 24, color: COLORS.gold }}>{totalPts}</div>
+                  <div style={{ fontSize: 11, color: COLORS.muted }}>total pts</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80, marginBottom: 6 }}>
+                {weekly.map((d, i) => (
+                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <div style={{ width: "100%", background: d.count > 0 ? COLORS.gold : COLORS.border,
+                      height: Math.max((d.count / maxCount) * 64, d.count > 0 ? 8 : 4),
+                      borderRadius: "4px 4px 0 0" }} />
+                    <div style={{ fontSize: 10, color: COLORS.muted }}>{d.day}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <div style={{ flex: 1, background: COLORS.goldLight, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                  <div style={{ fontWeight: 900, fontSize: 20 }}>{totalDone}</div>
+                  <div style={{ fontSize: 11, color: COLORS.muted }}>chores done</div>
+                </div>
+                <div style={{ flex: 1, background: COLORS.mintLight, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                  <div style={{ fontWeight: 900, fontSize: 20 }}>{totalPts}</div>
+                  <div style={{ fontSize: 11, color: COLORS.muted }}>points earned</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function ChildApp({ user, onLogout, sharedState }) {
-  const { chores, logs, setLogs } = sharedState;
+// ─── Child App ────────────────────────────────────────────────────────────────
+function ChildApp({ user, onLogout }) {
   const [tab, setTab] = useState("today");
+  const [chores, setChores] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const myChores = chores.filter(c => c.assignedTo === user.id);
-  const myLogs = logs[user.id] || {};
+  useEffect(() => { fetchAll(); }, []);
+
+  async function fetchAll() {
+    setLoading(true);
+    const { data: choreData } = await supabase.from("chores").select("*").eq("assigned_to", user.id);
+    const { data: logData } = await supabase.from("chore_logs").select("*").eq("child_id", user.id);
+    setChores(choreData || []);
+    setLogs(logData || []);
+    setLoading(false);
+  }
 
   function isDoneToday(choreId) {
-    return myLogs[choreId] === today();
+    return logs.some(l => l.chore_id === choreId && l.completed_date === today());
   }
 
-  function toggleChore(choreId) {
-    setLogs(prev => {
-      const userLogs = { ...(prev[user.id] || {}) };
-      if (userLogs[choreId] === today()) {
-        delete userLogs[choreId];
-      } else {
-        userLogs[choreId] = today();
-      }
-      return { ...prev, [user.id]: userLogs };
-    });
+  async function toggleChore(choreId) {
+    if (isDoneToday(choreId)) {
+      await supabase.from("chore_logs").delete()
+        .eq("chore_id", choreId).eq("child_id", user.id).eq("completed_date", today());
+      setLogs(prev => prev.filter(l => !(l.chore_id === choreId && l.completed_date === today())));
+    } else {
+      const { data } = await supabase.from("chore_logs").insert([{
+        chore_id: choreId, child_id: user.id, completed_date: today()
+      }]).select();
+      if (data) setLogs(prev => [...prev, ...data]);
+    }
   }
 
-  const doneToday = myChores.filter(c => isDoneToday(c.id)).length;
-  const totalPoints = Object.entries(myLogs).reduce((sum, [choreId]) => {
-    const chore = chores.find(c => c.id === choreId);
+  const totalPoints = logs.reduce((sum, l) => {
+    const chore = chores.find(c => c.id === l.chore_id);
     return sum + (chore ? chore.points : 0);
   }, 0);
 
-  const pct = myChores.length ? Math.round((doneToday / myChores.length) * 100) : 0;
-  const allDone = doneToday === myChores.length && myChores.length > 0;
+  const doneToday = chores.filter(c => isDoneToday(c.id)).length;
+  const pct = chores.length ? Math.round((doneToday / chores.length) * 100) : 0;
+  const allDone = doneToday === chores.length && chores.length > 0;
 
-  // Weekly data
   const weekly = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const ds = d.toISOString().split("T")[0];
     const dayName = d.toLocaleDateString("en", { weekday: "short" });
-    const count = Object.values(myLogs).filter(v => v === ds).length;
+    const count = logs.filter(l => l.completed_date === ds).length;
     weekly.push({ day: dayName, count });
   }
   const maxCount = Math.max(...weekly.map(d => d.count), 1);
+
+  if (loading) return (
+    <div style={{ ...S.app, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div style={{ textAlign: "center", color: COLORS.muted }}>
+        <div style={{ fontSize: 48 }}>{user.avatar}</div><div>Loading...</div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={S.app}>
@@ -554,7 +544,6 @@ function ChildApp({ user, onLogout, sharedState }) {
       </div>
 
       <div style={S.body}>
-        {/* Tab Bar */}
         <div style={{ ...S.card, padding: 6, display: "flex", gap: 4, marginBottom: 16 }}>
           <button style={S.tab(tab === "today")} onClick={() => setTab("today")}>📋 Today</button>
           <button style={S.tab(tab === "progress")} onClick={() => setTab("progress")}>📊 My Progress</button>
@@ -562,11 +551,10 @@ function ChildApp({ user, onLogout, sharedState }) {
 
         {tab === "today" && (
           <div>
-            {/* Progress summary */}
             <div style={{ ...S.card, background: allDone ? COLORS.mint : COLORS.navy, color: "#fff", textAlign: "center", marginBottom: 16 }}>
               <div style={{ fontSize: allDone ? 48 : 36, marginBottom: 4 }}>{allDone ? "🏆" : user.avatar}</div>
               <div style={{ fontWeight: 900, fontSize: allDone ? 20 : 18 }}>
-                {allDone ? "All done! Amazing work!" : `${doneToday} of ${myChores.length} done`}
+                {allDone ? "All done! Amazing work!" : `${doneToday} of ${chores.length} done`}
               </div>
               <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, height: 8, margin: "12px 0 4px", overflow: "hidden" }}>
                 <div style={{ background: COLORS.gold, width: `${pct}%`, height: "100%", borderRadius: 8, transition: "width 0.4s" }} />
@@ -574,8 +562,7 @@ function ChildApp({ user, onLogout, sharedState }) {
               <div style={{ fontSize: 12, opacity: 0.8 }}>{pct}% complete</div>
             </div>
 
-            {/* Chore list */}
-            {myChores.map(chore => {
+            {chores.map(chore => {
               const done = isDoneToday(chore.id);
               return (
                 <button key={chore.id} onClick={() => toggleChore(chore.id)} style={{
@@ -585,13 +572,11 @@ function ChildApp({ user, onLogout, sharedState }) {
                   border: done ? `2px solid ${COLORS.mint}` : `1px solid ${COLORS.border}`,
                   background: done ? COLORS.mintLight : COLORS.card,
                   cursor: "pointer", textAlign: "left",
-                  transition: "all 0.2s",
                 }}>
                   <div style={{
                     width: 32, height: 32, borderRadius: "50%",
                     background: done ? COLORS.mint : COLORS.border,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, transition: "background 0.2s",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>
                     {done && <span style={{ color: "#fff", fontSize: 16, fontWeight: 900 }}>✓</span>}
                   </div>
@@ -607,7 +592,7 @@ function ChildApp({ user, onLogout, sharedState }) {
               );
             })}
 
-            {myChores.length === 0 && (
+            {chores.length === 0 && (
               <div style={{ ...S.card, textAlign: "center", padding: 32, color: COLORS.muted }}>
                 <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
                 <div style={{ fontWeight: 700 }}>No chores assigned yet!</div>
@@ -619,29 +604,27 @@ function ChildApp({ user, onLogout, sharedState }) {
 
         {tab === "progress" && (
           <div>
-            {/* Stats */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
               <div style={{ ...S.card, textAlign: "center", background: COLORS.goldLight }}>
-                <div style={{ fontSize: 36, fontWeight: 900, color: COLORS.navy }}>{totalPoints}</div>
+                <div style={{ fontSize: 36, fontWeight: 900 }}>{totalPoints}</div>
                 <div style={{ fontSize: 12, color: COLORS.muted }}>Total Stars ⭐</div>
               </div>
               <div style={{ ...S.card, textAlign: "center", background: COLORS.mintLight }}>
-                <div style={{ fontSize: 36, fontWeight: 900, color: COLORS.navy }}>{Object.keys(myLogs).length}</div>
+                <div style={{ fontSize: 36, fontWeight: 900 }}>{logs.length}</div>
                 <div style={{ fontSize: 12, color: COLORS.muted }}>Chores Done 🏆</div>
               </div>
             </div>
 
-            {/* Weekly bar chart */}
             <div style={S.card}>
               <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>This Week</div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 100 }}>
                 {weekly.map((d, i) => (
                   <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    {d.count > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.navy }}>{d.count}</div>}
+                    {d.count > 0 && <div style={{ fontSize: 10, fontWeight: 700 }}>{d.count}</div>}
                     <div style={{
                       width: "100%", background: d.count > 0 ? COLORS.gold : COLORS.border,
                       height: Math.max((d.count / maxCount) * 72, d.count > 0 ? 10 : 4),
-                      borderRadius: "6px 6px 0 0", transition: "height 0.3s",
+                      borderRadius: "6px 6px 0 0",
                     }} />
                     <div style={{ fontSize: 10, color: COLORS.muted }}>{d.day}</div>
                   </div>
@@ -649,7 +632,6 @@ function ChildApp({ user, onLogout, sharedState }) {
               </div>
             </div>
 
-            {/* Reward levels */}
             <div style={{ ...S.card, marginTop: 12 }}>
               <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 12 }}>⭐ Star Levels</div>
               {[
@@ -686,22 +668,10 @@ function ChildApp({ user, onLogout, sharedState }) {
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
-export default function App() {
+export default function ChoreTracker() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [chores, setChores] = useState(INITIAL_CHORES);
-  const [logs, setLogs] = useState({});
 
-  if (!currentUser) {
-    return <LoginScreen onLogin={setCurrentUser} />;
-  }
-
-  const sharedState = { chores, setChores, logs, setLogs };
-
-  if (currentUser.role === "parent") {
-    return <ParentApp user={currentUser} onLogout={() => setCurrentUser(null)}
-      sharedState={sharedState} />;
-  }
-
-  return <ChildApp user={currentUser} onLogout={() => setCurrentUser(null)}
-    sharedState={sharedState} />;
+  if (!currentUser) return <LoginScreen onLogin={setCurrentUser} />;
+  if (currentUser.role === "parent") return <ParentApp user={currentUser} onLogout={() => setCurrentUser(null)} />;
+  return <ChildApp user={currentUser} onLogout={() => setCurrentUser(null)} />;
 }
