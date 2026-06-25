@@ -24,9 +24,10 @@ const COLORS = {
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 const INITIAL_USERS = [
-  { id: "parent1", name: "Parent", role: "parent", pin: "1234", avatar: "👨‍👩‍👧‍👦" },
-  { id: "child1", name: "Emma", role: "child", pin: "1111", avatar: "🦄", points: 0 },
-  { id: "child2", name: "Jake", role: "child", pin: "2222", avatar: "🦖", points: 0 },
+  { id: "parent1", name: "Anusha", role: "parent", pin: "6622", avatar: "👩" },
+  { id: "parent2", name: "Venkat", role: "parent", pin: "2433", avatar: "👨" },
+  { id: "child1", name: "Sarvesh", role: "child", pin: "2299", avatar: "🦁", points: 0 },
+  { id: "child2", name: "Sanjay", role: "child", pin: "5599", avatar: "🐯", points: 0 },
 ];
 
 const INITIAL_CHORES = [
@@ -235,7 +236,7 @@ function LoginScreen({ onLogin }) {
             }}>{d}</button>
           ))}
         </div>
-        <div style={{ marginTop: 16, fontSize: 11, color: COLORS.muted }}>Hint: Parent=1234, Emma=1111, Jake=2222</div>
+        <div style={{ marginTop: 16, fontSize: 11, color: COLORS.muted }}></div>
       </div>
     </div>
   );
