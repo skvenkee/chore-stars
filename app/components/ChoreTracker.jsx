@@ -26,7 +26,6 @@ const S = {
     background: COLORS.bg,
     fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
     color: COLORS.text,
-    maxWidth: 480,
     margin: "0 auto",
     position: "relative",
   },
