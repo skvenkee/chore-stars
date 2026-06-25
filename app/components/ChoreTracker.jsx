@@ -22,11 +22,11 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const S = {
   app: {
-    minHeight: "100vh",
+	minHeight: "100vh",
+    width: "100vw",
     background: COLORS.bg,
     fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
     color: COLORS.text,
-    margin: "0 auto",
     position: "relative",
   },
   header: {
