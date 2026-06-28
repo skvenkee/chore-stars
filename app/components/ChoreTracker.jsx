@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
-const todayStr = () => new Date().toISOString().split("T")[0];
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const fmtDate = (ds) => new Date(ds + "T12:00:00").toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" });
 const fmtMonthKey = (ds) => ds.slice(0, 7);
 const fmtMonthLabel = (mk) => new Date(mk + "-01T12:00:00").toLocaleDateString("en", { month: "long", year: "numeric" });
